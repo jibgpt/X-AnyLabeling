@@ -1663,7 +1663,7 @@ class LabelingWidget(LabelDialog):
         overview2 = action(
             self.tr("GroupID统计"),
             self.overview2,
-            shortcuts["show_overview"],
+            # shortcuts["show_overview"],
             icon="overview",
             tip=self.tr("Show annotations statistics"),
         )
