@@ -1095,13 +1095,13 @@ class Canvas(
             p2, p3, p4 = self.get_adjoint_points(
                 shape.direction, shape[sindex], pos, index
             )
-            if (
-                self.out_off_pixmap(p2)
-                or self.out_off_pixmap(p3)
-                or self.out_off_pixmap(p4)
-            ):
+            # if (
+            #     self.out_off_pixmap(p2)
+            #     or self.out_off_pixmap(p3)
+            #     or self.out_off_pixmap(p4)
+            # ):
             #     # No need to move if one pixal out of map
-                return
+            #     return
             # Move 4 pixal one by one
             shape.move_vertex_by(index, pos - point)
             lindex = (index + 1) % 4
