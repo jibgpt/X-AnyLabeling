@@ -70,6 +70,7 @@ from .widgets import (
     UniqueLabelQListWidget,
     ZoomWidget,
     NavigatorDialog,
+    GroupConsistencyDialog,
 )
 
 LABEL_COLORMAP = utils.label_colormap()
@@ -1659,6 +1660,14 @@ class LabelingWidget(LabelDialog):
             label_list=label_menu,
         )
 
+        overview2 = action(
+            self.tr("GroupID统计"),
+            self.overview2,
+            shortcuts["show_overview"],
+            icon="overview",
+            tip=self.tr("Show annotations statistics"),
+        )
+
         utils.add_actions(
             self.menus.file,
             (
@@ -1686,6 +1695,7 @@ class LabelingWidget(LabelDialog):
             self.menus.tool,
             (
                 overview,
+                overview2,
                 None,
                 save_crop,
                 None,
@@ -2584,6 +2594,10 @@ class LabelingWidget(LabelDialog):
     def overview(self):
         if self.filename:
             OverviewDialog(parent=self)
+
+    def overview2(self):
+        if self.filename:
+            GroupConsistencyDialog(parent=self)
 
     def digit_shortcut_manager(self):
         digit_shortcut_dialog = DigitShortcutDialog(parent=self)
