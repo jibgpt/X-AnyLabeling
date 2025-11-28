@@ -1095,13 +1095,13 @@ class Canvas(
             p2, p3, p4 = self.get_adjoint_points(
                 shape.direction, shape[sindex], pos, index
             )
-            # if (
-            #     self.out_off_pixmap(p2)
-            #     or self.out_off_pixmap(p3)
-            #     or self.out_off_pixmap(p4)
-            # ):
+            if (
+                self.out_off_pixmap(p2)
+                or self.out_off_pixmap(p3)
+                or self.out_off_pixmap(p4)
+            ):
             #     # No need to move if one pixal out of map
-            #     return
+                return
             # Move 4 pixal one by one
             shape.move_vertex_by(index, pos - point)
             lindex = (index + 1) % 4
@@ -1154,11 +1154,53 @@ class Canvas(
         # a bit "shaky" when nearing the border and allows it to
         # go outside of the shape's area for some reason.
         # self.calculateOffsets(self.selectedShapes, pos)
+        #限制框不允许出界
+        if not self.pixmap:
+            return False
+
+        img_width = self.pixmap.width()
+        img_height = self.pixmap.height()
+
         dp = pos - self.prev_point
-        if dp:
+        if not dp:
+            return False
+
+        # 收集所有点
+        all_points = []
+        for shape in shapes:
+            all_points.extend(shape.points)
+
+        if not all_points:
+            return False
+
+        # 计算边界
+        min_x = min(p.x() for p in all_points)
+        max_x = max(p.x() for p in all_points)
+        min_y = min(p.y() for p in all_points)
+        max_y = max(p.y() for p in all_points)
+
+        # 计算允许的移动
+        allowed_dx = dp.x()
+        allowed_dy = dp.y()
+
+        # 限制X方向移动
+        if min_x + allowed_dx < 0:
+            allowed_dx = -min_x
+        if max_x + allowed_dx >= img_width:
+            allowed_dx = img_width - 1 - max_x
+
+        # 限制Y方向移动
+        if min_y + allowed_dy < 0:
+            allowed_dy = -min_y
+        if max_y + allowed_dy >= img_height:
+            allowed_dy = img_height - 1 - max_y
+
+        # 如果有允许的移动，执行它
+        if allowed_dx != 0 or allowed_dy != 0:
+            allowed_dp = QtCore.QPointF(allowed_dx, allowed_dy)
             for shape in shapes:
-                shape.move_by(dp)
-            self.prev_point = pos
+                shape.move_by(allowed_dp)
+            self.prev_point = self.prev_point + allowed_dp  # 更新为实际移动的位置
             return True
         return False
 
@@ -2475,3 +2517,20 @@ class Canvas(
                     shape.group_id = None
 
         self.update()
+
+
+    def is_point_in_pixmap(self, point):
+        """检查点是否在图片边界内"""
+        if not self.pixmap:
+            return False
+        return (0 <= point.x() < self.pixmap.width() and
+                0 <= point.y() < self.pixmap.height())
+
+    def are_all_points_in_pixmap(self, shape):
+        """检查形状的所有点是否都在图片边界内"""
+        if not self.pixmap:
+            return False
+        for point in shape.points:
+            if not self.is_point_in_pixmap(point):
+                return False
+        return True
