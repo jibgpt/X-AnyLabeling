@@ -34,6 +34,7 @@ from PyQt5.QtWidgets import (
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from anylabeling.services.auto_labeling import _THUMBNAIL_RENDER_MODELS
 from anylabeling.views.training import UltralyticsDialog
+from .widgets.leakage_wrong import LeakageWrongDialog
 
 from ...app_info import (
     __appname__,
@@ -84,13 +85,13 @@ class LabelingWidget(LabelDialog):
     next_files_changed = QtCore.pyqtSignal(list)
 
     def __init__(  # noqa: C901
-        self,
-        parent=None,
-        config=None,
-        filename=None,
-        output=None,
-        output_file=None,
-        output_dir=None,
+            self,
+            parent=None,
+            config=None,
+            filename=None,
+            output=None,
+            output_file=None,
+            output_dir=None,
     ):
         self.parent = parent
         if output is not None:
@@ -1656,6 +1657,7 @@ class LabelingWidget(LabelDialog):
             tool=self.menu(self.tr("Tool")),
             train=self.menu(self.tr("Train")),
             help=self.menu(self.tr("Help")),
+            wmCopy=self.menu(self.tr("复制W")),
             recent_files=QtWidgets.QMenu(self.tr("Open Recent")),
             label_list=label_menu,
         )
@@ -1665,6 +1667,30 @@ class LabelingWidget(LabelDialog):
             self.overview2,
             # shortcuts["show_overview"],
             icon="overview",
+            tip=self.tr("Show annotations statistics"),
+        )
+
+        leakage = action(
+            self.tr("漏检"),
+            self.leakage,
+            # shortcuts["show_overview"],
+            icon="format_classify",
+            tip=self.tr("Show annotations statistics"),
+        )
+
+        wrong = action(
+            self.tr("误检"),
+            self.wrond,
+            # shortcuts["show_overview"],
+            icon="format_classify",
+            tip=self.tr("Show annotations statistics"),
+        )
+
+        leakage_wrong = action(
+            self.tr("漏检-误检"),
+            self.leakage_wrong,
+            # shortcuts["show_overview"],
+            icon="format_classify",
             tip=self.tr("Show annotations statistics"),
         )
 
@@ -1823,6 +1849,17 @@ class LabelingWidget(LabelDialog):
                 show_hidden_polygons,
                 group_selected_shapes,
                 ungroup_selected_shapes,
+            ),
+        )
+
+        utils.add_actions(
+            self.menus.wmCopy,
+            (
+                leakage,
+                None,
+                wrong,
+                None,
+                leakage_wrong,
             ),
         )
 
@@ -2042,9 +2079,9 @@ class LabelingWidget(LabelDialog):
         right_sidebar_layout.addWidget(self.file_dock)
         self.file_dock.setFeatures(QDockWidget.DockWidgetFloatable)
         dock_features = (
-            ~QDockWidget.DockWidgetMovable
-            | ~QDockWidget.DockWidgetFloatable
-            | ~QDockWidget.DockWidgetClosable
+                ~QDockWidget.DockWidgetMovable
+                | ~QDockWidget.DockWidgetFloatable
+                | ~QDockWidget.DockWidgetClosable
         )
         rev_dock_features = ~dock_features
         self.label_dock.setFeatures(
@@ -2163,7 +2200,7 @@ class LabelingWidget(LabelDialog):
                         self.navigator_dialog.move(saved_position)
 
                 if hasattr(self, "actions") and hasattr(
-                    self.actions, "show_navigator"
+                        self.actions, "show_navigator"
                 ):
                     self.actions.show_navigator.setChecked(True)
 
@@ -2172,7 +2209,7 @@ class LabelingWidget(LabelDialog):
 
     def _navigator_close_event(self, event: QtGui.QCloseEvent) -> None:
         if hasattr(self, "actions") and hasattr(
-            self.actions, "show_navigator"
+                self.actions, "show_navigator"
         ):
             self.actions.show_navigator.setChecked(False)
 
@@ -2230,7 +2267,7 @@ class LabelingWidget(LabelDialog):
     @pyqtSlot(list)
     def on_exif_detected(self, exif_files):
         if utils.ExifProcessingDialog.show_detection_dialog(
-            self, len(exif_files)
+                self, len(exif_files)
         ):
             logger.info("Start processing EXIF orientation")
             utils.ExifProcessingDialog.process_exif_files_with_progress(
@@ -2309,6 +2346,7 @@ class LabelingWidget(LabelDialog):
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = self.output_dir + "/" + label_file_without_path
+                # 自动保存
             self.save_labels(label_file)
             self.update_navigator_shapes()
             return
@@ -2599,6 +2637,18 @@ class LabelingWidget(LabelDialog):
         if self.filename:
             GroupConsistencyDialog(parent=self)
 
+    def leakage(self):
+        if self.filename:
+            LeakageWrongDialog(parent=self, leakageWrongType='漏检')
+
+    def wrond(self):
+        if self.filename:
+            LeakageWrongDialog(parent=self, leakageWrongType='误检')
+
+    def leakage_wrong(self):
+        if self.filename:
+            LeakageWrongDialog(parent=self, leakageWrongType='')
+
     def digit_shortcut_manager(self):
         digit_shortcut_dialog = DigitShortcutDialog(parent=self)
         result = digit_shortcut_dialog.exec_()
@@ -2688,7 +2738,7 @@ class LabelingWidget(LabelDialog):
     def loop_thru_labels(self):
         self.label_loop_count += 1
         if len(self.label_list) == 0 or self.label_loop_count >= len(
-            self.label_list
+                self.label_list
         ):
             # If we go through all the things go back to 100%
             self.label_loop_count = -1
@@ -2752,7 +2802,7 @@ class LabelingWidget(LabelDialog):
     def loop_select_labels(self):
         self.select_loop_count += 1
         if len(self.label_list) == 0 or self.select_loop_count >= len(
-            self.label_list
+                self.label_list
         ):
             self.select_loop_count = -1
             self.canvas.deselect_shape()
@@ -2809,13 +2859,13 @@ class LabelingWidget(LabelDialog):
         self.toggle_draw_mode(edit=False, create_mode=create_mode)
 
     def toggle_draw_mode(
-        self, edit=True, create_mode="rectangle", disable_auto_labeling=True
+            self, edit=True, create_mode="rectangle", disable_auto_labeling=True
     ):
         # Disable auto labeling if needed
         if (
-            disable_auto_labeling
-            and self.auto_labeling_widget.auto_labeling_mode
-            != AutoLabelingMode.NONE
+                disable_auto_labeling
+                and self.auto_labeling_widget.auto_labeling_mode
+                != AutoLabelingMode.NONE
         ):
             self.clear_auto_labeling_marks()
             self.auto_labeling_widget.set_auto_labeling_mode(None)
@@ -3189,7 +3239,7 @@ class LabelingWidget(LabelDialog):
                             property_widget.setCurrentIndex(index)
                     elif isinstance(property_widget, QWidget):
                         for child in property_widget.findChildren(
-                            QRadioButton
+                                QRadioButton
                         ):
                             if child.text() == selected_option:
                                 child.setChecked(True)
@@ -3227,9 +3277,9 @@ class LabelingWidget(LabelDialog):
             property_display = property
             if font_metrics.width(property) > available_width:
                 while (
-                    font_metrics.width(property_display + "...")
-                    > available_width
-                    and len(property_display) > 1
+                        font_metrics.width(property_display + "...")
+                        > available_width
+                        and len(property_display) > 1
                 ):
                     property_display = property_display[:-1]
                 property_display += "..."
@@ -3253,8 +3303,8 @@ class LabelingWidget(LabelDialog):
                         return text, text
                     truncated = text
                     while (
-                        font_metrics.width(truncated + "...") > max_width
-                        and len(truncated) > 1
+                            font_metrics.width(truncated + "...") > max_width
+                            and len(truncated) > 1
                     ):
                         truncated = truncated[:-1]
                     return truncated + "...", text
@@ -3263,7 +3313,7 @@ class LabelingWidget(LabelDialog):
                     return font_metrics.width(text) + 30
 
                 def create_radio_button_with_handler(
-                    display_text, original_text, prop, shape_idx
+                        display_text, original_text, prop, shape_idx
                 ):
                     radio_button = QRadioButton(display_text)
                     if display_text != original_text:
@@ -3325,15 +3375,15 @@ class LabelingWidget(LabelDialog):
                             )
 
                             if (
-                                first_truncated_width + button_width
-                                <= available_width
+                                    first_truncated_width + button_width
+                                    <= available_width
                             ):
                                 current_row_buttons = [
                                     (first_truncated, first_original),
                                     (display_text, original_text),
                                 ]
                                 current_row_width = (
-                                    first_truncated_width + button_width
+                                        first_truncated_width + button_width
                                 )
                                 idx += 1
                             else:
@@ -3342,8 +3392,8 @@ class LabelingWidget(LabelDialog):
                                 row_layout.setSpacing(4)
 
                                 for (
-                                    btn_display,
-                                    btn_original,
+                                        btn_display,
+                                        btn_original,
                                 ) in current_row_buttons:
                                     radio_button = (
                                         create_radio_button_with_handler(
@@ -3355,8 +3405,8 @@ class LabelingWidget(LabelDialog):
                                     )
                                     row_layout.addWidget(radio_button)
                                     if current_value == btn_original or (
-                                        current_value is None
-                                        and btn_original == options[0]
+                                            current_value is None
+                                            and btn_original == options[0]
                                     ):
                                         radio_button.setChecked(True)
                                         if current_value is None:
@@ -3377,8 +3427,8 @@ class LabelingWidget(LabelDialog):
                             row_layout.setContentsMargins(0, 0, 0, 0)
                             row_layout.setSpacing(4)
                             for (
-                                btn_display,
-                                btn_original,
+                                    btn_display,
+                                    btn_original,
                             ) in current_row_buttons:
                                 radio_button = (
                                     create_radio_button_with_handler(
@@ -3390,8 +3440,8 @@ class LabelingWidget(LabelDialog):
                                 )
                                 row_layout.addWidget(radio_button)
                                 if current_value == btn_original or (
-                                    current_value is None
-                                    and btn_original == options[0]
+                                        current_value is None
+                                        and btn_original == options[0]
                                 ):
                                     radio_button.setChecked(True)
                                     if current_value is None:
@@ -3418,8 +3468,8 @@ class LabelingWidget(LabelDialog):
                         )
                         row_layout.addWidget(radio_button)
                         if current_value == btn_original or (
-                            current_value is None
-                            and btn_original == options[0]
+                                current_value is None
+                                and btn_original == options[0]
                         ):
                             radio_button.setChecked(True)
                             if current_value is None:
@@ -3446,7 +3496,8 @@ class LabelingWidget(LabelDialog):
                 else:
                     update_shape.attributes[property] = options[0]
                 property_combo.currentIndexChanged.connect(
-                    lambda _, prop=property, combo=property_combo, shape_idx=shape_index: self.attribute_selection_changed(
+                    lambda _, prop=property, combo=property_combo,
+                           shape_idx=shape_index: self.attribute_selection_changed(
                         shape_idx, prop, combo
                     )
                 )
@@ -3504,11 +3555,11 @@ class LabelingWidget(LabelDialog):
             format_shape(shape)
             for shape in _shapes
             if shape.label
-            not in [
-                AutoLabelingMode.OBJECT,
-                AutoLabelingMode.ADD,
-                AutoLabelingMode.REMOVE,
-            ]
+               not in [
+                   AutoLabelingMode.OBJECT,
+                   AutoLabelingMode.ADD,
+                   AutoLabelingMode.REMOVE,
+               ]
         ]
         flags = {}
         for i in range(self.flag_widget.count()):
@@ -3570,7 +3621,7 @@ class LabelingWidget(LabelDialog):
         self._no_selection_slot = False
         n_selected = len(selected_shapes)
         same_type = (
-            len(set(shape.shape_type for shape in selected_shapes)) <= 1
+                len(set(shape.shape_type for shape in selected_shapes)) <= 1
         )
         self.actions.delete.setEnabled(n_selected)
         self.actions.duplicate.setEnabled(n_selected)
@@ -3580,15 +3631,15 @@ class LabelingWidget(LabelDialog):
         self.actions.union_selection.setEnabled(
             not all(value > 0 for value in allow_merge_shape_type.values())
             and (
-                allow_merge_shape_type["rectangle"] > 1
-                or allow_merge_shape_type["polygon"] > 1
+                    allow_merge_shape_type["rectangle"] > 1
+                    or allow_merge_shape_type["polygon"] > 1
             )
         )
         self.set_text_editing(True)
 
         selected_count = len(self.canvas.selected_shapes)
         is_drawing_mode = (
-            hasattr(self.canvas, "current") and self.canvas.current is not None
+                hasattr(self.canvas, "current") and self.canvas.current is not None
         )
         if self.attributes and selected_count == 1 and not is_drawing_mode:
             for i in range(len(self.canvas.shapes)):
@@ -3690,9 +3741,9 @@ class LabelingWidget(LabelDialog):
             label_id += self._config["shift_auto_shape_color"]
             return LABEL_COLORMAP[label_id % len(LABEL_COLORMAP)]
         if (
-            self._config["shape_color"] == "manual"
-            and self._config["label_colors"]
-            and label in self._config["label_colors"]
+                self._config["shape_color"] == "manual"
+                and self._config["label_colors"]
+                and label in self._config["label_colors"]
         ):
             return self._config["label_colors"][label]
         if self._config["default_shape_color"]:
@@ -3770,11 +3821,11 @@ class LabelingWidget(LabelDialog):
             item.shape().to_dict()
             for item in self.label_list
             if item.shape().label
-            not in [
-                AutoLabelingMode.OBJECT,
-                AutoLabelingMode.ADD,
-                AutoLabelingMode.REMOVE,
-            ]
+               not in [
+                   AutoLabelingMode.OBJECT,
+                   AutoLabelingMode.ADD,
+                   AutoLabelingMode.REMOVE,
+               ]
         ]
         flags = {}
         for i in range(self.flag_widget.count()):
@@ -3935,9 +3986,9 @@ class LabelingWidget(LabelDialog):
         ]:
             text = self.canvas.shapes[-1].label
         elif (
-            self._config["display_label_popup"]
-            or not text
-            or self.canvas.shapes[-1].label == AutoLabelingMode.OBJECT
+                self._config["display_label_popup"]
+                or not text
+                or self.canvas.shapes[-1].label == AutoLabelingMode.OBJECT
         ):
             last_label = self.find_last_label()
             last_gid = (
@@ -4060,7 +4111,7 @@ class LabelingWidget(LabelDialog):
 
         target_x = x_ratio * canvas_size.width() - scroll_area_size.width() / 2
         target_y = (
-            y_ratio * canvas_size.height() - scroll_area_size.height() / 2
+                y_ratio * canvas_size.height() - scroll_area_size.height() / 2
         )
 
         self.set_scroll(Qt.Horizontal, target_x)
@@ -4097,8 +4148,8 @@ class LabelingWidget(LabelDialog):
     def update_navigator_shapes(self):
         """Update shapes overlay in navigator."""
         if (
-            not hasattr(self, "navigator_dialog")
-            or not self.navigator_dialog.isVisible()
+                not hasattr(self, "navigator_dialog")
+                or not self.navigator_dialog.isVisible()
         ):
             return
 
@@ -4110,7 +4161,7 @@ class LabelingWidget(LabelDialog):
         self.navigator_dialog.set_shapes(shapes, canvas_visible)
 
     def on_navigator_zoom_changed(
-        self, zoom_percentage: int, mouse_pos: Optional[QtCore.QPoint] = None
+            self, zoom_percentage: int, mouse_pos: Optional[QtCore.QPoint] = None
     ) -> None:
         """Handle zoom change from navigator controls."""
 
@@ -4153,15 +4204,15 @@ class LabelingWidget(LabelDialog):
 
         # Handle direct zoom changes
         if (
-            hasattr(self, "canvas")
-            and hasattr(self.canvas, "width")
-            and hasattr(self.canvas, "height")
+                hasattr(self, "canvas")
+                and hasattr(self.canvas, "width")
+                and hasattr(self.canvas, "height")
         ):
             if hasattr(self.navigator_dialog, "navigator"):
                 nav_widget = self.navigator_dialog.navigator
                 if (
-                    hasattr(nav_widget, "viewport_rect")
-                    and not nav_widget.viewport_rect.isEmpty()
+                        hasattr(nav_widget, "viewport_rect")
+                        and not nav_widget.viewport_rect.isEmpty()
                 ):
                     nav_rect_center_x = nav_widget.viewport_rect.center().x()
                     nav_rect_center_y = nav_widget.viewport_rect.center().y()
@@ -4185,7 +4236,7 @@ class LabelingWidget(LabelDialog):
                         canvas_width_new = self.canvas.width()
                         if canvas_width_old != canvas_width_new:
                             canvas_scale_factor = (
-                                canvas_width_new / canvas_width_old
+                                    canvas_width_new / canvas_width_old
                             )
                             x_shift = round(
                                 canvas_pos.x() * canvas_scale_factor
@@ -4218,29 +4269,29 @@ class LabelingWidget(LabelDialog):
             self.paint_canvas()
 
     def _convert_navigator_pos_to_canvas(
-        self, navigator_pos: QtCore.QPoint
+            self, navigator_pos: QtCore.QPoint
     ) -> Optional[QtCore.QPoint]:
         """Convert navigator mouse position to canvas coordinates."""
         if (
-            not hasattr(self, "navigator_dialog")
-            or not self.navigator_dialog.isVisible()
+                not hasattr(self, "navigator_dialog")
+                or not self.navigator_dialog.isVisible()
         ):
             return None
 
         navigator_widget = self.navigator_dialog.navigator
         if (
-            not navigator_widget.image_rect
-            or navigator_widget.image_rect.isEmpty()
+                not navigator_widget.image_rect
+                or navigator_widget.image_rect.isEmpty()
         ):
             return None
 
         relative_x = navigator_pos.x() - navigator_widget.image_rect.x()
         relative_y = navigator_pos.y() - navigator_widget.image_rect.y()
         if (
-            relative_x < 0
-            or relative_x > navigator_widget.image_rect.width()
-            or relative_y < 0
-            or relative_y > navigator_widget.image_rect.height()
+                relative_x < 0
+                or relative_x > navigator_widget.image_rect.width()
+                or relative_y < 0
+                or relative_y > navigator_widget.image_rect.height()
         ):
             return None
 
@@ -4263,7 +4314,7 @@ class LabelingWidget(LabelDialog):
         if self.navigator_dialog.isVisible():
             self.navigator_dialog.hide()
             if hasattr(self, "actions") and hasattr(
-                self.actions, "show_navigator"
+                    self.actions, "show_navigator"
             ):
                 self.actions.show_navigator.setChecked(False)
         else:
@@ -4274,7 +4325,7 @@ class LabelingWidget(LabelDialog):
                 )
                 self.update_navigator_viewport()
             if hasattr(self, "actions") and hasattr(
-                self.actions, "show_navigator"
+                    self.actions, "show_navigator"
             ):
                 self.actions.show_navigator.setChecked(True)
 
@@ -4455,8 +4506,8 @@ class LabelingWidget(LabelDialog):
 
         # Changing file_list_widget loads file
         if filename in self.image_list and (
-            self.file_list_widget.currentRow()
-            != self.fn_to_index[str(filename)]
+                self.file_list_widget.currentRow()
+                != self.fn_to_index[str(filename)]
         ):
             self.file_list_widget.setCurrentRow(
                 self.fn_to_index[str(filename)]
@@ -4484,7 +4535,7 @@ class LabelingWidget(LabelDialog):
             label_file_without_path = osp.basename(label_file)
             label_file = self.output_dir + "/" + label_file_without_path
         if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-            label_file
+                label_file
         ):
             try:
                 self.label_file = LabelFile(label_file, image_dir)
@@ -4544,8 +4595,8 @@ class LabelingWidget(LabelDialog):
         self.navigator_dialog.set_image(QtGui.QPixmap.fromImage(image))
         self.update_navigator_shapes()
         if (
-            hasattr(self, "_should_restore_navigator")
-            and self._should_restore_navigator
+                hasattr(self, "_should_restore_navigator")
+                and self._should_restore_navigator
         ):
             self._should_restore_navigator = False
             if self.navigator_dialog.isVisible():
@@ -4639,9 +4690,9 @@ class LabelingWidget(LabelDialog):
 
     def resizeEvent(self, _):
         if (
-            self.canvas
-            and not self.image.isNull()
-            and self.zoom_mode != self.MANUAL_ZOOM
+                self.canvas
+                and not self.image.isNull()
+                and self.zoom_mode != self.MANUAL_ZOOM
         ):
             self.adjust_scale()
         self.update_thumbnail_pixmap()
@@ -4757,9 +4808,9 @@ class LabelingWidget(LabelDialog):
             return
 
         if (
-            not self.may_continue()
-            or len(self.image_list) <= 0
-            or self.filename is None
+                not self.may_continue()
+                or len(self.image_list) <= 0
+                or self.filename is None
         ):
             return
 
@@ -4777,9 +4828,9 @@ class LabelingWidget(LabelDialog):
             return
 
         if (
-            not self.may_continue()
-            or len(self.image_list) <= 0
-            or self.filename is None
+                not self.may_continue()
+                or len(self.image_list) <= 0
+                or self.filename is None
         ):
             return
 
@@ -5198,7 +5249,7 @@ class LabelingWidget(LabelDialog):
         valid_files = []
         for file in image_files:
             if file in self.image_list or not file.lower().endswith(
-                tuple(extensions)
+                    tuple(extensions)
             ):
                 continue
             valid_files.append(file)
@@ -5209,7 +5260,7 @@ class LabelingWidget(LabelDialog):
             item = QtWidgets.QListWidgetItem(file)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-                label_file
+                    label_file
             ):
                 item.setCheckState(Qt.Checked)
             else:
@@ -5249,7 +5300,7 @@ class LabelingWidget(LabelDialog):
             item = QtWidgets.QListWidgetItem(filename)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-                label_file
+                    label_file
             ):
                 item.setCheckState(Qt.Checked)
             else:
@@ -5328,7 +5379,7 @@ class LabelingWidget(LabelDialog):
             AutoLabelingMode.REMOVE,
         ]:
             for item in self.unique_label_list.find_items_by_label(
-                shape_label
+                    shape_label
             ):
                 self.unique_label_list.takeItem(
                     self.unique_label_list.row(item)
@@ -5339,11 +5390,11 @@ class LabelingWidget(LabelDialog):
             shape
             for shape in self.canvas.shapes
             if shape.label
-            not in [
-                AutoLabelingMode.OBJECT,
-                AutoLabelingMode.ADD,
-                AutoLabelingMode.REMOVE,
-            ]
+               not in [
+                   AutoLabelingMode.OBJECT,
+                   AutoLabelingMode.ADD,
+                   AutoLabelingMode.REMOVE,
+               ]
         ]
         self.canvas.update()
 
@@ -5385,13 +5436,13 @@ class LabelingWidget(LabelDialog):
         for item in reversed(self.label_list):
             shape = item.data(Qt.UserRole)
             if (
-                shape.label
-                not in [
-                    AutoLabelingMode.OBJECT,
-                    AutoLabelingMode.ADD,
-                    AutoLabelingMode.REMOVE,
-                ]
-                and shape.group_id is not None
+                    shape.label
+                    not in [
+                AutoLabelingMode.OBJECT,
+                AutoLabelingMode.ADD,
+                AutoLabelingMode.REMOVE,
+            ]
+                    and shape.group_id is not None
             ):
                 return shape.group_id
         return None
@@ -5602,9 +5653,9 @@ class LabelingWidget(LabelDialog):
         )
         supported_model_list = list(_THUMBNAIL_RENDER_MODELS.keys())
         if not (
-            model_config
-            and model_config.get("type") in supported_model_list
-            and self.image_list
+                model_config
+                and model_config.get("type") in supported_model_list
+                and self.image_list
         ):
             return
 
