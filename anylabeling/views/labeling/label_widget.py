@@ -34,7 +34,9 @@ from PyQt5.QtWidgets import (
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from anylabeling.services.auto_labeling import _THUMBNAIL_RENDER_MODELS
 from anylabeling.views.training import UltralyticsDialog
+from .widgets.global_check import GlobalCheckDialog
 from .widgets.leakage_wrong import LeakageWrongDialog
+from .widgets.leakage_wrong_cancel import LeakageWrongCancelDialog
 
 from ...app_info import (
     __appname__,
@@ -1694,6 +1696,22 @@ class LabelingWidget(LabelDialog):
             tip=self.tr("Show annotations statistics"),
         )
 
+        leakage_wrong_cancel = action(
+            self.tr("撤销"),
+            self.leakage_wrong_cancel,
+            # shortcuts["show_overview"],
+            icon="format_classify",
+            tip=self.tr("Show annotations statistics"),
+        )
+
+        global_check = action(
+            self.tr("全局检查漏误检"),
+            self.global_check,
+            # shortcuts["show_overview"],
+            icon="format_classify",
+            tip=self.tr("Show annotations statistics"),
+        )
+
         utils.add_actions(
             self.menus.file,
             (
@@ -1860,6 +1878,10 @@ class LabelingWidget(LabelDialog):
                 wrong,
                 None,
                 leakage_wrong,
+                None,
+                leakage_wrong_cancel,
+                None,
+                global_check,
             ),
         )
 
@@ -2648,6 +2670,14 @@ class LabelingWidget(LabelDialog):
     def leakage_wrong(self):
         if self.filename:
             LeakageWrongDialog(parent=self, leakageWrongType='')
+
+    def leakage_wrong_cancel(self):
+        if self.filename:
+            LeakageWrongCancelDialog(parent=self)
+
+    def global_check(self):
+        if self.filename:
+            GlobalCheckDialog(parent=self)
 
     def digit_shortcut_manager(self):
         digit_shortcut_dialog = DigitShortcutDialog(parent=self)
