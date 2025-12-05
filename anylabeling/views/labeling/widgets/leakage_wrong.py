@@ -22,11 +22,11 @@ class LeakageWrongDialog(QtWidgets.QDialog):
         self.image_path = self.parent.filename
         if leakageWrongType == '':
             self.image_output_dir = str(Path(self.parent.last_open_dir).parent / "hard" / "images")
-            self.label_output_dir = str(Path(self.parent.last_open_dir).parent / "hard" / "json_label")
+            self.label_output_dir = str(Path(self.parent.last_open_dir).parent / "hard" / "json_labels")
         else:
             self.image_output_dir = str(Path(self.parent.last_open_dir).parent / "hard" / leakageWrongType / "images")
             self.label_output_dir = str(
-                Path(self.parent.last_open_dir).parent / "hard" / leakageWrongType / "json_label")
+                Path(self.parent.last_open_dir).parent / "hard" / leakageWrongType / "json_labels")
         self.setup_ui()
         # 自动执行复制操作
         self.copyImage()
